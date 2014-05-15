@@ -139,8 +139,8 @@
 
          ~(when shutdown-as
             `(defn ~shutdown-as
-               []
-               (shutdown-system! (var ~system) (var ~nrepl) stop## exit##)))
+               ([] (shutdown-system! (var ~system) (var ~nrepl) stop## exit##))
+               ([e#] (shutdown-system! (var ~system) (var ~nrepl) stop## e#))))
 
          (defn ~sym
            [& args#]
