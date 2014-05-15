@@ -47,9 +47,11 @@
 (defn stop-nrepl!
   "Stop nREPL stored in the given var."
   [nrepl-var]
-  (info "shutting down nREPL server ...")
-  (alter-var-root nrepl-var #(when % (stop-server %) nil))
-  (info "nREPL server shut down."))
+  (alter-var-root nrepl-var
+                  #(when %
+                     (info "shutting down nREPL server ...")
+                     (stop-server %)
+                     (info "nREPL server shut down."))))
 
 ;; ## System
 
