@@ -60,26 +60,20 @@
   [system-var start stop args]
   (->> (fn [system]
          (when (and system stop)
-           (info "stopping system ...")
            (stop system))
          (when start
-           (info "starting system ...")
            (apply start args)))
-       (alter-var-root system-var))
-  (info "system is running. smoothly."))
+       (alter-var-root system-var)))
 
 (defn shutdown-system!
   "Shutdown system/nREPL stored in the given vars and exit if desired."
   [system-var nrepl-var stop exit?]
   (->> (fn [system]
          (when (and system stop)
-           (info "shutting down system ...")
-           (stop system)
-           (info "system is shut down.")))
+           (stop system)))
        (alter-var-root system-var))
   (stop-nrepl! nrepl-var)
   (when exit?
-    (info "exitting application ...")
     (System/exit 0)))
 
 ;; ## Main
@@ -124,11 +118,22 @@
   (let [nrepl (or nrepl-as (with-meta (gensym "nrepl") {:private true}))
         system (or system-as (with-meta (gensym "system") {:private true}))]
     (unify-gensyms
-      `(let [opts# ~(prepare-command-line opts)
-             start## ~start
-             stop## ~stop
+      `(let [opts#       ~(prepare-command-line opts)
+             start##     ~(when start
+                            `(let [f# ~start]
+                               (fn [opts# args#]
+                                 (info "starting up system ...")
+                                 (let [r# (f# opts# args#)]
+                                   (info "system is running. smoothly.")
+                                   r#))))
+             stop##      ~(when stop
+                            `(let [f# ~stop]
+                               (fn [sys#]
+                                 (info "shutting down system ...")
+                                 (f# sys#)
+                                 (info "system shut down."))))
              shortcuts# (quote ~shortcuts)
-             exit## ~exit?
+             exit##     ~exit?
              cli-opts## (atom nil)]
 
          (defonce ~nrepl nil)
