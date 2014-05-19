@@ -17,7 +17,7 @@ Doesn't seem much but reduces the amount of boilerplate necessary to create a `-
 __Leiningen__ ([via Clojars](https://clojars.org/minion))
 
 ```clojure
-[minion "0.1.1"]
+[minion "0.1.2"]
 ```
 
 __REPL__

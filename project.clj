@@ -1,4 +1,4 @@
-(defproject minion "0.1.2-SNAPSHOT"
+(defproject minion "0.1.2"
   :description "Launcher Utilities"
   :url "https://github.com/xsc/minion"
   :license {:name "Eclipse Public License"
