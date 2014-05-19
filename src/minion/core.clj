@@ -107,17 +107,19 @@
    - `:default-port`: the default nREPL port. if this is given a nREPL server will always be
      started; otherwise only if the `--repl-port` switch is given.
    - `:shortcuts`: a map to be passed to `minion.core/shortcut!`.
-   - `:nrepl-as`: the symbol used to create the nREPL server var.
-   - `:system-as`: the symbol used to create the system var.
+   - `:nrepl-as`: the symbol used to create the nREPL server var (default: `nrepl`).
+   - `:system-as`: the symbol used to create the system var (default: `system`).
    - `:restart-as`: the symbol used to create a restart function (default: `restart!`).
    - `:shutdown-as`: the symbol used to create a shutdown function (default: `shutdown!`).
    - `:exit?`: whether or not to exit on shutdown.
    "
   [sym & {:keys [start stop command-line shortcuts default-port
                  nrepl-as system-as restart-as shutdown-as exit?]
-          :or {exit? true
-               restart-as 'restart!
-               shutdown-as 'shutdown!}
+          :or {exit?        true
+               system-as    'system
+               nrepl-as     'nrepl
+               restart-as   'restart!
+               shutdown-as  'shutdown!}
           :as opts}]
   (let [nrepl (or nrepl-as (with-meta (gensym "nrepl") {:private true}))
         system (or system-as (with-meta (gensym "system") {:private true}))]
