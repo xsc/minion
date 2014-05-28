@@ -49,7 +49,7 @@ can be used to prepend a string to the help output.
 $ lein run -- --help
 Usage: app [<options>] <first name> <last name>
 
-   -p, --port PORT        9901   port for HTTP interface
+   -p, --port PORT        9999   port for HTTP interface
        --repl-port PORT          port for nREPL
    -h, --help
 
