@@ -28,7 +28,7 @@ __REPL__
 (defmain -main
   :default-port 1234
   :usage        "Usage: app [<options>] <first name> <last name>"
-  :start        (fn [options args] (generate-and-start-system ...))
+  :start        (fn [options [first-name last-name]] (generate-and-start-system ...))
   :stop         (fn [system] (destroy-system ...))
   :shortcuts    {cli      my.app.cli
                  main-cli my.app.main}
