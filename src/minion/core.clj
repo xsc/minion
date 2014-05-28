@@ -98,6 +98,7 @@
      resources associated with the application.
    - `:command-line`: a `tools.cli` compatible vector of command line switches; note that
      `--repl-port` and `-h`/`--help` will be automatically added.
+   - `:usage`: a string to be displayed above the option summary when using the `--help` switch,
    - `:default-port`: the default nREPL port. if this is given a nREPL server will always be
      started; otherwise only if the `--repl-port` switch is given.
    - `:shortcuts`: a map to be passed to `minion.core/shortcut!`.
@@ -108,7 +109,8 @@
    - `:exit?`: whether or not to exit on shutdown.
    "
   [sym & {:keys [start stop command-line shortcuts default-port
-                 nrepl-as system-as restart-as shutdown-as exit?]
+                 nrepl-as system-as restart-as shutdown-as exit?
+                 usage]
           :or {exit?        true
                system-as    'system
                nrepl-as     'nrepl
@@ -119,6 +121,7 @@
         system (or system-as (with-meta (gensym "system") {:private true}))]
     (unify-gensyms
       `(let [opts#       ~(prepare-command-line opts)
+             usage#      ~usage
              start##     ~(when start
                             `(let [f# ~start]
                                (fn [opts# args#]
@@ -157,7 +160,11 @@
                                    (doseq [e# errors#]
                                      (println e#))
                                    (System/exit 1))
-                   (:help options#) (println summary#)
+                   (:help options#) (do
+                                      (when usage#
+                                        (println usage#)
+                                        (println))
+                                      (println summary#))
                    :else (do
                            (reset! cli-opts## [options# arguments#])
                            (info "starting up application ...")
