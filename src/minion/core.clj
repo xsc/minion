@@ -164,7 +164,8 @@
                                       (when usage#
                                         (println usage#)
                                         (println))
-                                      (println summary#))
+                                      (println summary#)
+                                      (println))
                    :else (do
                            (reset! cli-opts## [options# arguments#])
                            (info "starting up application ...")
