@@ -41,7 +41,7 @@ See the docstring of `defmain` for more options.
 ## Command Line Parsing
 
 The `:command-line` option can contain a vector compatible with [tools.cli](https://github.com/clojure/tools.cli)'s
-`parse-cli`. The command line will be parsed according to this specification, enriched by the two switches `--help`
+`parse-opts`. The command line will be parsed according to this specification, enriched by the two switches `--help`
 (to display the CLI summary) and `--repl-port` (to overwrite or set the port for the embedded nREPL server). `:usage`
 can be used to prepend a string to the help output.
 
