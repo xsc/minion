@@ -86,7 +86,7 @@ functions to manage your system's lifecycle:
 - `(shutdown! exit?)` will stop your system and nREPL server but `System/exit` is only called if `exit?` is true.
 
 Actually, there's the `:exit?` option that determines the behaviour of the zero-parameter `shutdown!` function.
-Note that you can set symbols for shutdown and restart using `:shutdown-as` and `:nrepl-as`.
+Note that you can set symbols for shutdown and restart using `:shutdown-as` and `:restart-as`.
 
 ## License
 
