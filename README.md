@@ -40,17 +40,20 @@ See the docstring of `defmain` for more options.
 ## Command Line Parsing
 
 The `:command-line` option can contain a vector compatible with [tools.cli](https://github.com/clojure/tools.cli)'s
-`parse-opts`. The command line will be parsed according to this specification, enriched by the two switches `--help`
-(to display the CLI summary) and `--repl-port` (to overwrite or set the port for the embedded nREPL server). `:usage`
-can be used to prepend a string to the help output.
+`parse-opts`. The command line will be parsed according to this specification, enriched by the switches `--help`
+(to display the CLI summary), `--repl-port` (to overwrite or set the port for the embedded nREPL server) and
+`--no-repl` (to disable the embedded nREPL server).
+
+`:usage` can be used to prepend a string to the help output.
 
 ```
 $ lein run -- --help
 Usage: app [<options>] <first name> <last name>
 
    -p, --port PORT        9999   port for HTTP interface
-       --repl-port PORT          port for nREPL
-   -h, --help
+       --repl-port PORT  port for nREPL.
+       --no-repl         disable nREPL.
+       --help
 
 ```
 
