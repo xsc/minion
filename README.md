@@ -10,15 +10,14 @@ __minion__ helps starting up an application by:
 
 Doesn't seem much but reduces the amount of boilerplate necessary to create a `-main` function.
 
+[![Build Status](https://travis-ci.org/xsc/minion.svg?branch=master)](https://travis-ci.org/xsc/minion)
 [![endorse](https://api.coderwall.com/xsc/endorsecount.png)](https://coderwall.com/xsc)
 
 ## Usage
 
 __Leiningen__ ([via Clojars](https://clojars.org/minion))
 
-```clojure
-[minion "0.1.3"]
-```
+[![Clojars Project](http://clojars.org/minion/latest-version.svg)](http://clojars.org/minion)
 
 __REPL__
 
