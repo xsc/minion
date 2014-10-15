@@ -1,93 +1,125 @@
 (ns minion.core
-  (:require [clojure.tools.logging :refer [info debug]]
-            [clojure.tools.nrepl.server :refer [start-server stop-server]]
+  (:require [minion
+             [nrepl :as nrepl]
+             [shortcuts :refer [shortcuts!]]
+             [system :as system]]
+            [clojure.tools.logging :refer [info debug]]
             [clojure.tools.cli :refer [parse-opts]]
             [potemkin :refer [unify-gensyms]]))
 
-;; ## Namespace Switching
+;; ## Initialization
 
-(defn shortcuts!
-  "Create shortcuts for namespace switching. Takes a map of `function -> target-namespace`
-   associations and interns the given function into all other target namespaces, as well
-   as the `user` one."
-  ([m] (shortcuts! m false))
-  ([m force?]
-   {:pre [(or (not m) (map? m))
-          (every? symbol? (keys m))
-          (every? symbol? (vals m))]}
-   (->> (for [[f target-ns] m
-              src-ns (distinct (cons 'user (vals m)))
-              :when (not= target-ns src-ns)]
-          (try
-            (let [nspace (create-ns src-ns)
-                  goto-ns! #(in-ns target-ns)
-                  r (ns-resolve nspace f)]
-              (if (and (not force?) r)
-                (printf "WARN: %s would be overwritten. not creating shortcut.%n" r)
-                (intern src-ns f goto-ns!)))
-            (catch Throwable ex
-              (printf "WARN: could not create shortcut '%s' [%s -> %s]: %s%n"
-                      f src-ns target-ns (.getMessage ex)))))
-        (filter identity)
-        (vec))))
+(defn print-help
+  "Print help text + usage."
+  [{:keys [options summary]} usage]
+  (when-let [help (:help options)]
+    (when usage
+      (println usage)
+      (println))
+    (println summary)
+    (println)
+    :help))
 
-;; ## nREPL
+(defn print-errors
+  "Print error data."
+  [{:keys [errors]}]
+  (when (seq errors)
+    (doseq [e errors]
+      (println e))
+    :error))
 
-(defn start-nrepl!
-  "Start nREPL and store in the given var."
-  [nrepl-var port]
-  (alter-var-root nrepl-var
-                  #(do
-                     (when % (stop-server %))
-                     (info "starting up nREPL server on port" port "...")
-                     (let [s (start-server :port port)]
-                       (info "nREPL server is running ...")
-                       s))))
+(defn startup!
+  [{:keys [var] :as sys} options arguments]
+  (system/restart-system! sys options arguments)
+  (alter-meta! var assoc ::opts [options arguments])
+  :ok)
 
-(defn stop-nrepl!
-  "Stop nREPL stored in the given var."
-  [nrepl-var]
-  (alter-var-root nrepl-var
-                  #(when %
-                     (info "shutting down nREPL server ...")
-                     (stop-server %)
-                     (info "nREPL server shut down."))))
-
-;; ## System
-
-(defn restart-system!
-  "Restart system stored in the given var."
-  [system-var start stop args]
-  (->> (fn [system]
-         (when (and system stop)
-           (stop system))
-         (when start
-           (apply start args)))
-       (alter-var-root system-var)))
-
-(defn shutdown-system!
-  "Shutdown system/nREPL stored in the given vars and exit if desired."
-  [system-var nrepl-var stop exit?]
-  (->> (fn [system]
-         (when (and system stop)
-           (stop system)))
-       (alter-var-root system-var))
-  (stop-nrepl! nrepl-var)
-  (when exit?
-    (System/exit 0)))
-
-;; ## Main
+;; ## Macro Helpers
 
 (defn- prepare-command-line
   "Add nREPL port and help switches to command line args."
-  [{:keys [command-line default-port]}]
+  [{:keys [command-line default-port nrepl?]}]
   `(concat
      ~command-line
-     [[nil "--repl-port PORT" "port for nREPL"
-       :id :repl-port
-       :default ~default-port
-       :parse-fn #(Integer/parseInt %)]
-      ["-h" "--help"]]))
+     ~(when nrepl?
+        [[nil "--repl-port PORT" "port for nREPL."
+          :id :repl-port
+          :default default-port
+          :parse-fn #(Integer/parseInt %)]
+         [nil "--no-repl" "disable nREPL."
+          :id :repl?
+          :default true
+          :parse-fn not]])
+     [["-h" "--help"]]))
+
+(defn- create-system-vars
+  "Create system/nREPL vars."
+  [{:keys [system-as nrepl-as start stop]}]
+  `(do
+     (defonce ~system-as nil)
+     (defonce ~nrepl-as nil)
+     (let [system-map# (system/system-map
+                         ~system-as
+                         ~start
+                         ~stop
+                         ~nrepl-as)]
+       (alter-meta! (var ~system-as) assoc ::system system-map#)
+       (->> (fn [v#]
+              (if-not (::opts v#)
+                (assoc v# ::opts [{} []])
+                v#))
+            (alter-meta! (var ~system-as))))))
+
+(defn- create-restart
+  "Create startup/restart function."
+  [{:keys [restart-as system-as command-line usage]
+    :as opts}]
+  `(let [opts# ~(prepare-command-line opts)
+         usage# ~usage]
+     (defn ~restart-as
+       ([]
+        (let [opts# (-> (var ~system-as) meta ::opts)]
+          (assert (= (count opts#) 2))
+          (apply ~restart-as opts#)))
+       ([args#]
+        (let [result# (parse-opts args# opts#)]
+          (or (print-errors result#)
+              (print-help result# usage#)
+              (~restart-as
+                (:options result#)
+                (:arguments result#)))))
+       ([options# arguments#]
+        {:pre [(map? options#)
+               (sequential? arguments#)]}
+        (let [var# (var ~system-as)
+              sys# (-> var# meta ::system)]
+          (if @var#
+            (info "restarting application ...")
+            (info "starting up application ..."))
+          (startup! sys# options# arguments#))))))
+
+(defn- create-shutdown
+  "Create shutdown function."
+  [{:keys [shutdown-as system-as exit?]}]
+  `(let [exit# ~exit?]
+     (defn ~shutdown-as
+       ([] (~shutdown-as exit#))
+       ([exit-system#]
+        (let [sys# (-> (var ~system-as) meta ::system)]
+          (system/shutdown-system! sys# exit-system#))))))
+
+(defn- create-main
+  "Create main function."
+  [{:keys [restart-as shortcuts]} sym]
+  (let [sym (->> {:arglists '([& args])}
+                 (with-meta sym))]
+    `(let [shortcuts# (quote ~shortcuts)]
+       (defn ~sym
+         [& args#]
+         (shortcuts! shortcuts#)
+         (~restart-as args#)))))
+
+;; ## Main
 
 (defmacro defmain
   "Define function for application execution. The following options are available:
@@ -110,66 +142,26 @@
    "
   [sym & {:keys [start stop command-line shortcuts default-port
                  nrepl-as system-as restart-as shutdown-as exit?
-                 usage]
+                 nrepl? usage]
           :or {exit?        true
+               nrepl?       true
                system-as    'system
                nrepl-as     'nrepl
                restart-as   'restart!
                shutdown-as  'shutdown!}
           :as opts}]
-  (let [nrepl (or nrepl-as (with-meta (gensym "nrepl") {:private true}))
-        system (or system-as (with-meta (gensym "system") {:private true}))]
-    (unify-gensyms
-      `(let [opts#       ~(prepare-command-line opts)
-             usage#      ~usage
-             start##     ~(when start
-                            `(let [f# ~start]
-                               (fn [opts# args#]
-                                 (info "starting up system ...")
-                                 (let [r# (f# opts# args#)]
-                                   (info "system is running. smoothly.")
-                                   r#))))
-             stop##      ~(when stop
-                            `(let [f# ~stop]
-                               (fn [sys#]
-                                 (info "shutting down system ...")
-                                 (f# sys#)
-                                 (info "system shut down."))))
-             shortcuts# (quote ~shortcuts)
-             exit##     ~exit?
-             cli-opts## (atom nil)]
-
-         (defonce ~nrepl nil)
-         (defonce ~system nil)
-
-         ~(when restart-as
-            `(defn ~restart-as
-               []
-               (restart-system! (var ~system) start## stop## @cli-opts##)))
-
-         ~(when shutdown-as
-            `(defn ~shutdown-as
-               ([] (shutdown-system! (var ~system) (var ~nrepl) stop## exit##))
-               ([e#] (shutdown-system! (var ~system) (var ~nrepl) stop## e#))))
-
-         (defn ~sym
-           [& args#]
-           (let [result# (parse-opts args# opts#)
-                 [options# arguments# errors# summary#] ((juxt :options :arguments :errors :summary) result#)]
-             (cond (seq errors#) (do
-                                   (doseq [e# errors#]
-                                     (println e#))
-                                   (System/exit 1))
-                   (:help options#) (do
-                                      (when usage#
-                                        (println usage#)
-                                        (println))
-                                      (println summary#)
-                                      (println))
-                   :else (do
-                           (reset! cli-opts## [options# arguments#])
-                           (info "starting up application ...")
-                           (shortcuts! shortcuts#)
-                           (when-let [port# (:repl-port options#)]
-                             (start-nrepl! (var ~nrepl) port#))
-                           (restart-system! (var ~system) start## stop## @cli-opts##)))))))))
+  (let [opts (merge-with
+               (fn [a b]
+                 (if (nil? b) a b))
+               {:exit?       true
+                :nrepl?      true
+                :system-as   'system
+                :nrepl-as    'nrepl
+                :restart-as  'restart!
+                :shutdown-as 'shutdown!}
+               opts)]
+    `(do
+       ~(create-system-vars opts)
+       ~(create-restart opts)
+       ~(create-shutdown opts)
+       ~(create-main opts sym))))
