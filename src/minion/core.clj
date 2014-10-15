@@ -22,7 +22,7 @@
           :id :repl?
           :default true
           :parse-fn not]])
-     [["-h" "--help"]]))
+     [[nil "--help"]]))
 
 (defn- create-system-vars
   "Create system/nREPL vars."
@@ -78,7 +78,10 @@
        ([] (~shutdown-as exit#))
        ([exit-system#]
         (let [sys# (-> (var ~system-as) meta ::system)]
-          (system/shutdown-system! sys# exit-system#))))))
+          (shutdown! sys# exit-system#))))))
+
+(def ^:dynamic *exit-on-error?*
+  true)
 
 (defn- create-main
   "Create main function."
@@ -89,8 +92,10 @@
        (defn ~sym
          [& args#]
          (shortcuts! shortcuts#)
-         (if (= (~restart-as args#) :error)
-           (System/exit 1))))))
+         (let [v# (~restart-as args#)]
+           (if (and (= v# :error) *exit-on-error?*)
+             (System/exit 1)
+             v#))))))
 
 ;; ## Main
 

@@ -55,7 +55,7 @@
          (when (and system stop)
            (stop system))
          (when start
-           (apply start opts args)))
+           (start opts args)))
        (alter-var-root var)))
 
 (defn shutdown-system!
@@ -63,7 +63,8 @@
   [{:keys [var nrepl stop]} exit?]
   (->> (fn [system]
          (when (and system stop)
-           (stop system)))
+           (stop system))
+         nil)
        (alter-var-root var))
   (when (and nrepl @nrepl)
     (nrepl/stop-nrepl! nrepl))

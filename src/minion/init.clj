@@ -34,3 +34,12 @@
       (error ex "during startup/restart.")
       :error)))
 
+(defn shutdown!
+  [sys exit?]
+  (try
+    (do
+      (system/shutdown-system! sys exit?)
+      :ok)
+    (catch Throwable ex
+      (error ex "during shutdown.")
+      :error)))
