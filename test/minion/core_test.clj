@@ -92,11 +92,14 @@
         reset #(reset-all 'restart-system flow)]
     (testing "normal restart"
       (reset)
-      (is (= :ok (f)))
+      (is (= :ok (f "-o" "initial-value")))
       (is (= @#'restart-system :on))
       (is (= :ok (restart')))
       (is (= (count @flow) 3))
       (is (= (map first @flow) [:start :stop :start]))
+      (let [[opts _ opts'] (map second @flow)]
+        (is (= (-> opts first :option) "initial-value"))
+        (is (= (-> opts' first :option) "initial-value")))
       (is (= :ok (restart-shutdown))))
     (testing "restart with new arguments"
       (reset)

@@ -28,7 +28,7 @@
   (try
     (do
       (system/restart-system! sys options arguments)
-      (alter-meta! var assoc ::opts [options arguments])
+      (alter-meta! var assoc :minion-opts [options arguments])
       :ok)
     (catch Throwable ex
       (error ex "during startup/restart.")

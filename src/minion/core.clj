@@ -37,8 +37,8 @@
                          ~nrepl-as)]
        (alter-meta! (var ~system-as) assoc ::system system-map#)
        (->> (fn [v#]
-              (if-not (::opts v#)
-                (assoc v# ::opts [{} []])
+              (if-not (:minion-opts v#)
+                (assoc v# :minion-opts [{} []])
                 v#))
             (alter-meta! (var ~system-as))))))
 
@@ -50,7 +50,7 @@
          usage# ~usage]
      (defn ~restart-as
        ([]
-        (let [opts# (-> (var ~system-as) meta ::opts)]
+        (let [opts# (-> (var ~system-as) meta :minion-opts)]
           (assert (= (count opts#) 2))
           (apply ~restart-as opts#)))
        ([args#]
