@@ -1,38 +1,10 @@
 (ns minion.core
   (:require [minion
-             [nrepl :as nrepl]
+             [init :refer :all]
              [shortcuts :refer [shortcuts!]]
              [system :as system]]
-            [clojure.tools.logging :refer [info debug]]
-            [clojure.tools.cli :refer [parse-opts]]
-            [potemkin :refer [unify-gensyms]]))
-
-;; ## Initialization
-
-(defn print-help
-  "Print help text + usage."
-  [{:keys [options summary]} usage]
-  (when-let [help (:help options)]
-    (when usage
-      (println usage)
-      (println))
-    (println summary)
-    (println)
-    :help))
-
-(defn print-errors
-  "Print error data."
-  [{:keys [errors]}]
-  (when (seq errors)
-    (doseq [e errors]
-      (println e))
-    :error))
-
-(defn startup!
-  [{:keys [var] :as sys} options arguments]
-  (system/restart-system! sys options arguments)
-  (alter-meta! var assoc ::opts [options arguments])
-  :ok)
+            [clojure.tools.logging :refer [info debug error]]
+            [clojure.tools.cli :refer [parse-opts]]))
 
 ;; ## Macro Helpers
 
@@ -117,9 +89,44 @@
        (defn ~sym
          [& args#]
          (shortcuts! shortcuts#)
-         (~restart-as args#)))))
+         (if (= (~restart-as args#) :error)
+           (System/exit 1))))))
 
 ;; ## Main
+
+(defn- private-sym
+  "Create a private symbol."
+  []
+  (with-meta (gensym) {:private true}))
+
+(defn- ensure-syms
+  "Ensure that the given keys contain symbols. Inserts a private
+   by default."
+  [m ks]
+  (reduce
+    (fn [m k]
+      (update-in m [k]
+                 #(if %
+                    (symbol (name %))
+                    (private-sym))))
+    m ks))
+
+(defn- opts-and-defaults
+  "Process options, add defaults."
+  [opts]
+  (-> (merge
+        {:exit?       true
+         :nrepl?      true
+         :system-as   'system
+         :nrepl-as    'nrepl
+         :restart-as  'restart!
+         :shutdown-as 'shutdown!}
+        opts)
+      (ensure-syms
+        [:restart-as
+         :shutdown-as
+         :system-as
+         :nrepl-as])))
 
 (defmacro defmain
   "Define function for application execution. The following options are available:
@@ -133,7 +140,7 @@
    - `:usage`: a string to be displayed above the option summary when using the `--help` switch,
    - `:default-port`: the default nREPL port. if this is given a nREPL server will always be
      started; otherwise only if the `--repl-port` switch is given.
-   - `:shortcuts`: a map to be passed to `minion.core/shortcut!`.
+   - `:shortcuts`: a map to be passed to `minion.shortcuts/shortcut!`.
    - `:nrepl-as`: the symbol used to create the nREPL server var (default: `nrepl`).
    - `:system-as`: the symbol used to create the system var (default: `system`).
    - `:restart-as`: the symbol used to create a restart function (default: `restart!`).
@@ -150,16 +157,7 @@
                restart-as   'restart!
                shutdown-as  'shutdown!}
           :as opts}]
-  (let [opts (merge-with
-               (fn [a b]
-                 (if (nil? b) a b))
-               {:exit?       true
-                :nrepl?      true
-                :system-as   'system
-                :nrepl-as    'nrepl
-                :restart-as  'restart!
-                :shutdown-as 'shutdown!}
-               opts)]
+  (let [opts (opts-and-defaults opts)]
     `(do
        ~(create-system-vars opts)
        ~(create-restart opts)
