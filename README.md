@@ -57,7 +57,21 @@ Usage: app [<options>] <first name> <last name>
 
 ```
 
-Options and extra arguments will be passed to the function set as `:start`.
+Options and extra arguments will be passed to the function set as `:start`. In `minion.cli` you can find
+some helper functions to reduce the amount of code to write for the command line spec:
+
+```clojure
+(require '[minion.cli :as cli])
+
+(vector
+  (cli/flag   :debug            "activate debugging.")
+  (cli/string [:f :cfg] "FILE"  "config file.")
+  (cli/float  [:r]      "RATIO" "aspect ratio.")])
+;; => [[nil "--debug" "activate debugging." :default false]
+;;     ["-f" "--cfg FILE" "config file."]
+;;     ["-r" "--r RATIO" "aspect ratio."
+;;      :parse-fn #<cli$string__GT_double minion.cli$string__GT_double@58bca166>]]
+```
 
 ## Embedded nREPL
 
