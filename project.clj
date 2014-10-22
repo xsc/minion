@@ -7,7 +7,8 @@
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/tools.cli "0.3.1"]
                  [org.clojure/tools.nrepl "0.2.6"]]
-  :profiles {:dev {:dependencies [[com.taoensso/timbre "3.3.1"]]
+  :profiles {:base {:dependencies ^:replace []}
+             :dev {:dependencies [[com.taoensso/timbre "3.3.1"]]
                    :injections [(require 'clojure.tools.logging 'taoensso.timbre.tools.logging)
                                 (taoensso.timbre.tools.logging/use-timbre)
                                 (taoensso.timbre/set-level! :fatal)]}}
