@@ -136,7 +136,11 @@
                :stop (fn [_]
                        (throw (Exception. "stop"))))]
       (testing "unknown command line option."
-        (is (= :error (f "--unknown-option"))))
+        (with-open [w (java.io.StringWriter.)]
+          (binding [*out* w]
+            (is (= :error (f "--unknown-option")))
+            (is (re-find #"Unknown option" (str w)))
+            (is (re-find #"--unknown-option" (str w))))))
       (testing "startup exceptions."
         (is (= :error (f "throw"))))
       (testing "shutdown exceptions."
