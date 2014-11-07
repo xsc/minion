@@ -104,6 +104,10 @@ functions to manage your system's lifecycle:
 Actually, there's the `:exit?` option that determines the behaviour of the zero-parameter `shutdown!` function.
 Note that you can set symbols for shutdown and restart using `:shutdown-as` and `:restart-as`.
 
+## Shutdown Hook
+
+The stop function can be automatically registered as a shutdown hook if the `:hook?` option is set to `true`.
+
 ## License
 
 Copyright &copy; 2014 Yannick Scherer
