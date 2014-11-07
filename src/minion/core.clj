@@ -3,7 +3,7 @@
              [init :refer :all]
              [shortcuts :refer [shortcuts!]]
              [system :as system]]
-            [clojure.tools.logging :refer [info debug error]]
+            [clojure.tools.logging :refer [info debug warn error]]
             [clojure.tools.cli :refer [parse-opts]]))
 
 ;; ## Macro Helpers
@@ -80,12 +80,28 @@
         (let [sys# (-> (var ~system-as) meta ::system)]
           (shutdown! sys# exit-system#))))))
 
+(defn- create-shutdown-hook
+  [{:keys [shutdown-as hook?]}]
+  (when hook?
+    `(do
+       (debug "registering shutdown hook ...")
+       (doto (Runtime/getRuntime)
+         (.addShutdownHook
+           (Thread.
+             (fn []
+               (try
+                 (debug "running shutdown hook ...")
+                 (~shutdown-as false)
+                 (debug "shutdown hook has run.")
+                 (catch Throwable t#
+                   (warn t# "in shutdown hook."))))))))))
+
 (def ^:dynamic *exit-on-error?*
   true)
 
 (defn- create-main
   "Create main function."
-  [{:keys [restart-as shortcuts]} sym]
+  [{:keys [restart-as shortcuts] :as opts} sym]
   (let [sym (->> {:arglists '([& args])}
                  (with-meta sym))]
     `(let [shortcuts# (quote ~shortcuts)]
@@ -95,7 +111,9 @@
          (let [v# (~restart-as args#)]
            (if (and (= v# :error) *exit-on-error?*)
              (System/exit 1)
-             v#))))))
+             (do
+               ~(create-shutdown-hook opts)
+               v#)))))))
 
 ;; ## Main
 
@@ -120,12 +138,13 @@
   "Process options, add defaults."
   [opts]
   (-> (merge
-        {:exit?       true
-         :nrepl?      true
-         :system-as   'system
-         :nrepl-as    'nrepl
-         :restart-as  'restart!
-         :shutdown-as 'shutdown!}
+        {:exit?          true
+         :hook?          false
+         :nrepl?         true
+         :system-as      'system
+         :nrepl-as       'nrepl
+         :restart-as     'restart!
+         :shutdown-as    'shutdown!}
         opts)
       (ensure-syms
         [:restart-as
@@ -151,16 +170,20 @@
    - `:restart-as`: the symbol used to create a restart function (default: `restart!`).
    - `:shutdown-as`: the symbol used to create a shutdown function (default: `shutdown!`).
    - `:exit?`: whether or not to exit on shutdown.
+   - `:hook?`: whether or not to register a shutdown hook that calls `:stop (default: false).
+
+   Note that you will run into trouble if you explicitly run `System/exit` within the stop fn.
    "
-  [sym & {:keys [start stop command-line shortcuts default-port
-                 nrepl-as system-as restart-as shutdown-as exit?
-                 nrepl? usage]
-          :or {exit?        true
-               nrepl?       true
-               system-as    'system
-               nrepl-as     'nrepl
-               restart-as   'restart!
-               shutdown-as  'shutdown!}
+  [sym & {:keys [start stop command-line shortcuts usage default-port
+                 nrepl-as system-as restart-as shutdown-as
+                 exit? hook? nrepl?]
+          :or {exit?       true
+               nrepl?      true
+               hook?       false
+               system-as   'system
+               nrepl-as    'nrepl
+               restart-as  'restart!
+               shutdown-as 'shutdown!}
           :as opts}]
   (let [opts (opts-and-defaults opts)]
     `(do
