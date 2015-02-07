@@ -2,6 +2,7 @@
   (:require [minion
              [init :refer :all]
              [shortcuts :refer [shortcuts!]]
+             [nrepl :as nrepl]
              [system :as system]]
             [clojure.tools.logging :refer [info debug warn error]]
             [clojure.tools.cli :refer [parse-opts]]))
@@ -32,10 +33,11 @@
 
 (defn- create-system-vars
   "Create system/nREPL vars."
-  [{:keys [system-as nrepl-as start stop]}]
+  [{:keys [system-as nrepl-as nrepl start stop]}]
   `(do
      ~(defonce-maybe system-as)
      ~(defonce-maybe nrepl-as)
+     (nrepl/set-opts! (var ~nrepl-as) ~nrepl)
      (let [system-map# (system/system-map
                          ~system-as
                          ~start
@@ -172,6 +174,7 @@
    - `:usage`: a string to be displayed above the option summary when using the `--help` switch,
    - `:default-port`: the default nREPL port. if this is given a nREPL server will always be
      started; otherwise only if the `--repl-port` switch is given.
+   - `:nrepl`: options that will be passed to the nREPL server function.
    - `:shortcuts`: a map to be passed to `minion.shortcuts/shortcut!`.
    - `:nrepl-as`: the symbol used to create the nREPL server var (default: `nrepl`).
    - `:system-as`: the symbol used to create the system var (default: `system`).
@@ -182,7 +185,8 @@
 
    Note that you will run into trouble if you explicitly run `System/exit` within the stop fn.
    "
-  [sym & {:keys [start stop command-line shortcuts usage default-port
+  [sym & {:keys [start stop command-line shortcuts usage
+                 default-port nrepl
                  nrepl-as system-as restart-as shutdown-as
                  exit? hook? nrepl?]
           :or {exit?       true

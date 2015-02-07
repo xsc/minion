@@ -167,17 +167,19 @@
                         :repl-failed))
                     (catch java.net.ConnectException ex
                       :repl-error)))
+        greeted? (atom 0)
         f @(defmain m-nrepl
              :system-as   ^:not-once nrepl-system
              :nrepl-as    ^:not-once nrepl'
              :restart-as  nrepl-restart
              :shutdown-as nrepl-shutdown
-             :nrepl-as    nrepl'
+             :nrepl {:greeting-fn (fn [& _] (swap! greeted? inc))}
              :exit? false
              :default-port port)]
     (testing "default nREPL"
       (is (= :ok (f)))
       (is (= :repl-ok (connect port)))
+      (is (= 1 @greeted?))
       (is (= :ok (nrepl-shutdown)))
       (is (= :repl-error (connect port))))
     (testing "disabled nREPL"
@@ -187,5 +189,6 @@
     (testing "command line nREPL port"
       (is (= :ok (f "--repl-port" "12344")))
       (is (= :repl-ok (connect 12344)))
+      (is (= 2 @greeted?))
       (is (= :ok (nrepl-shutdown)))
       (is (= :repl-error (connect port))))))
