@@ -94,6 +94,9 @@ the `:nrepl` option, e.g. to include
   ...)
 ```
 
+__NOTE__ that the nREPL server binds to `127.0.0.1` by default but you can
+override this behaviour by supplying `:bind` in the `:nrepl` map.
+
 ## Namespace Shortcuts
 
 Say you have a namespace `my.app.cli` for managing your application that should
