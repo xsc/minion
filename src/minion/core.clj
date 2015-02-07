@@ -24,12 +24,18 @@
           :parse-fn not]])
      [[nil "--help"]]))
 
+(defn- defonce-maybe
+  [sym]
+  (if (-> sym meta :not-once)
+    `(def ~sym nil)
+    `(defonce ~sym nil)))
+
 (defn- create-system-vars
   "Create system/nREPL vars."
   [{:keys [system-as nrepl-as start stop]}]
   `(do
-     (defonce ~system-as nil)
-     (defonce ~nrepl-as nil)
+     ~(defonce-maybe system-as)
+     ~(defonce-maybe nrepl-as)
      (let [system-map# (system/system-map
                          ~system-as
                          ~start
@@ -130,7 +136,9 @@
     (fn [m k]
       (update-in m [k]
                  #(if %
-                    (symbol (name %))
+                    (with-meta
+                      (symbol (name %))
+                      (meta %))
                     (private-sym))))
     m ks))
 

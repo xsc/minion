@@ -9,7 +9,8 @@
   [system flow-atom]
   (when-let [v (resolve system)]
     (alter-var-root v (constantly nil)))
-  (reset! flow-atom [])
+  (when flow-atom
+    (reset! flow-atom []))
   true)
 
 ;; ## Tests
@@ -56,7 +57,7 @@
 
 (deftest t-help
   (let [f @(defmain m-help
-             :system-as   help-system
+             :system-as   ^:not-once help-system
              :restart-as  help-restart
              :shutdown-as help-shutdown
              :exit? false
@@ -77,7 +78,7 @@
 (deftest t-restart
   (let [flow (atom [])
         f @(defmain m-restart
-             :system-as   restart-system
+             :system-as   ^:not-once restart-system
              :restart-as  restart'
              :shutdown-as restart-shutdown
              :exit? false
@@ -124,8 +125,8 @@
 (deftest t-errors
   (binding [minion.core/*exit-on-error?* false]
     (let [f @(defmain m-error
-               :system-as   error-system
-               :nrepl-as    error-nrepl
+               :system-as   ^:not-once error-system
+               :nrepl-as    ^:not-once error-nrepl
                :restart-as  error-restart
                :shutdown-as error-shutdown
                :exit? false
@@ -134,16 +135,20 @@
                           (throw (Exception. "start"))
                           :on))
                :stop (fn [_]
-                       (throw (Exception. "stop"))))]
+                       (throw (Exception. "stop"))))
+          reset #(reset-all 'error-system nil)]
       (testing "unknown command line option."
+        (reset)
         (with-open [w (java.io.StringWriter.)]
           (binding [*out* w]
             (is (= :error (f "--unknown-option")))
             (is (re-find #"Unknown option" (str w)))
             (is (re-find #"--unknown-option" (str w))))))
       (testing "startup exceptions."
+        (reset)
         (is (= :error (f "throw"))))
       (testing "shutdown exceptions."
+        (reset)
         (is (= :ok (f)))
         (is (= :error (error-shutdown)))))))
 
@@ -163,7 +168,8 @@
                     (catch java.net.ConnectException ex
                       :repl-error)))
         f @(defmain m-nrepl
-             :system-as   nrepl-system
+             :system-as   ^:not-once nrepl-system
+             :nrepl-as    ^:not-once nrepl'
              :restart-as  nrepl-restart
              :shutdown-as nrepl-shutdown
              :nrepl-as    nrepl'
