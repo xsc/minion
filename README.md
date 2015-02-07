@@ -83,7 +83,16 @@ port, even if no `--repl-port` command line switch is given. Otherwise, the
 desired port will be used.
 
 You can set the var that stores the server handle using the option `:nrepl-as`
-(default: `nrepl`).
+(default: `nrepl`). Additionally, you can customize the startup command using
+the `:nrepl` option, e.g. to include
+[cider-nrepl](https://github.com/clojure-emacs/cider-nrepl):
+
+```
+(defmain -main
+  ...
+  :nrepl {:handler cider.nrepl/cider-nrepl-handler}
+  ...)
+```
 
 ## Namespace Shortcuts
 
