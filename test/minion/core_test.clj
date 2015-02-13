@@ -18,6 +18,7 @@
 (deftest t-main
   (let [flow (atom [])
         f @(defmain m-main
+             :system-as ^:not-once system
              :exit? false
              :usage "usage-info"
              :command-line [["-o" "--option V" "an option."
@@ -53,7 +54,9 @@
            ["--option" "value"] "value"   true  []
            ["hey"]              "default" true  ["hey"]
            ["-o" "value" "hey"] "value"   true  ["hey"]
-           ["--no-repl"]        "default" false []))))
+           ["--no-repl"]        "default" false []
+           [{:option "value"}
+            "hey" "there"]      "value"   true  ["hey" "there"]))))
 
 (deftest t-help
   (let [f @(defmain m-help

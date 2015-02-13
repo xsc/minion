@@ -109,19 +109,35 @@
 
 (defn- create-main
   "Create main function."
-  [{:keys [restart-as shortcuts] :as opts} sym]
+  [{:keys [restart-as shortcuts default-port nrepl?]
+    :or {nrepl? true}
+    :as opts} sym]
   (let [sym (->> {:arglists '([& args])}
                  (with-meta sym))]
-    `(let [shortcuts# (quote ~shortcuts)]
+    `(let [shortcuts# (delay (shortcuts! (quote ~shortcuts)))]
        (defn ~sym
          [& args#]
-         (shortcuts! shortcuts#)
-         (let [v# (~restart-as args#)]
-           (if (and (= v# :error) *exit-on-error?*)
-             (System/exit 1)
-             (do
-               ~(create-shutdown-hook opts)
-               v#)))))))
+         @shortcuts#
+         (if (map? (first args#))
+           (let [v# (~restart-as
+                      (merge
+                        {:repl-port ~default-port
+                         :repl? true}
+                        (first args#)
+                        ~(if-not nrepl?
+                           {:repl? false}))
+                      (rest args#))]
+             (if (= v# :error)
+               (throw
+                 (IllegalStateException.
+                   "error during startup!"))
+               ~(create-shutdown-hook opts))
+             v#)
+           (let [v# (~restart-as args#)]
+             (if (and (= v# :error) *exit-on-error?*)
+               (System/exit 1)
+               ~(create-shutdown-hook opts))
+             v#))))))
 
 ;; ## Main
 
