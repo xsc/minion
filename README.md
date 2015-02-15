@@ -129,6 +129,10 @@ Actually, there's the `:exit?` option that determines the behaviour of the
 zero-parameter `shutdown!` function.  Note that you can set symbols for shutdown
 and restart using `:shutdown-as` and `:restart-as`.
 
+Note that the function created by `defmain` can be called with a map as its
+first parameter, in which case it will be directly passed to the restart
+function.
+
 ## Shutdown Hook
 
 The stop function can be automatically registered as a shutdown hook if the
