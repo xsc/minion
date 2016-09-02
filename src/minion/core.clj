@@ -80,11 +80,15 @@
 
 (defn- create-shutdown
   "Create shutdown function."
-  [{:keys [shutdown-as system-as]}]
-  `(defn ~shutdown-as
-     []
-     (let [sys# (-> (var ~system-as) meta ::system)]
-       (shutdown! sys#))))
+  [{:keys [shutdown-as system-as shutdown]}]
+  `(let [after-shutdown# ~shutdown]
+     (defn ~shutdown-as
+       []
+       (let [sys# (-> (var ~system-as) meta ::system)
+             result# (shutdown! sys#)]
+         (when after-shutdown#
+           (after-shutdown#))
+         result#))))
 
 (defn- create-shutdown-hook
   [{:keys [shutdown-as hook?]}]
@@ -178,6 +182,7 @@
      running application based on a map of options.
    - `:stop`: a single-arity function that processes the value created by `:start` and frees all
      resources associated with the application.
+   - `:shutdown`: a zero-arity function to be called on shutdown (in addition to `:stop`).
    - `:command-line`: a `tools.cli` compatible vector of command line switches; note that
      `--repl-port` and `-h`/`--help` will be automatically added.
    - `:usage`: a string to be displayed above the option summary when using the `--help` switch,
@@ -193,7 +198,7 @@
 
    Note that you will run into trouble if you explicitly run `System/exit` within the stop fn.
    "
-  [sym & {:keys [start stop command-line shortcuts usage
+  [sym & {:keys [start stop shutdown command-line shortcuts usage
                  default-port nrepl
                  nrepl-as system-as restart-as shutdown-as
                  hook? nrepl?]
