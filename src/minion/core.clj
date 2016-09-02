@@ -52,10 +52,11 @@
 
 (defn- create-restart
   "Create startup/restart function."
-  [{:keys [restart-as system-as command-line usage]
+  [{:keys [restart-as system-as error command-line usage]
     :as opts}]
   `(let [opts# ~(prepare-command-line opts)
-         usage# ~usage]
+         usage# ~usage
+         on-error# ~error]
      (defn ~restart-as
        ([]
         (let [opts# (-> (var ~system-as) meta :minion-opts)]
@@ -76,7 +77,10 @@
           (if @var#
             (info "restarting application ...")
             (info "starting up application ..."))
-          (startup! sys# options# arguments#))))))
+          (let [v# (startup! sys# options# arguments#)]
+            (when (and on-error# (= v# :error))
+              (on-error#))
+            v#))))))
 
 (defn- create-shutdown
   "Create shutdown function."
@@ -183,6 +187,7 @@
    - `:stop`: a single-arity function that processes the value created by `:start` and frees all
      resources associated with the application.
    - `:shutdown`: a zero-arity function to be called on shutdown (in addition to `:stop`).
+   - `:error`: a zero-arity function to be called on startup error.
    - `:command-line`: a `tools.cli` compatible vector of command line switches; note that
      `--repl-port` and `-h`/`--help` will be automatically added.
    - `:usage`: a string to be displayed above the option summary when using the `--help` switch,
@@ -198,7 +203,7 @@
 
    Note that you will run into trouble if you explicitly run `System/exit` within the stop fn.
    "
-  [sym & {:keys [start stop shutdown command-line shortcuts usage
+  [sym & {:keys [start stop error shutdown command-line shortcuts usage
                  default-port nrepl
                  nrepl-as system-as restart-as shutdown-as
                  hook? nrepl?]

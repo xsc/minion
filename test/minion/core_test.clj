@@ -123,7 +123,8 @@
       (is (= :ok (restart-shutdown))))))
 
 (deftest t-errors
-  (let [f @(defmain m-error
+  (let [error? (atom false)
+        f @(defmain m-error
              :system-as   ^:not-once error-system
              :nrepl-as    ^:not-once error-nrepl
              :restart-as  error-restart
@@ -133,22 +134,27 @@
                         (throw (Exception. "start"))
                         :on))
              :stop (fn [_]
-                     (throw (Exception. "stop"))))
-        reset #(reset-all 'error-system nil)]
+                     (throw (Exception. "stop")))
+             :error #(reset! error? true))
+        reset #(do (reset! error? false)
+                   (reset-all 'error-system nil))]
     (testing "unknown command line option."
       (reset)
       (with-open [w (java.io.StringWriter.)]
         (binding [*out* w]
           (is (= :error (f "--unknown-option")))
           (is (re-find #"Unknown option" (str w)))
-          (is (re-find #"--unknown-option" (str w))))))
+          (is (re-find #"--unknown-option" (str w)))))
+      (is (false? @error?)))
     (testing "startup exceptions."
       (reset)
-      (is (= :error (f "throw"))))
+      (is (= :error (f "throw")))
+      (is (true? @error?)))
     (testing "shutdown exceptions."
       (reset)
       (is (= :ok (f)))
-      (is (= :error (error-shutdown))))))
+      (is (= :error (error-shutdown)))
+      (is (false? @error?)))))
 
 (deftest t-nrepl
   (let [port 12343
