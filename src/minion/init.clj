@@ -35,10 +35,10 @@
       :error)))
 
 (defn shutdown!
-  [sys exit?]
+  [sys]
   (try
     (do
-      (system/shutdown-system! sys exit?)
+      (system/shutdown-system! sys)
       :ok)
     (catch Throwable ex
       (error ex "during shutdown.")

@@ -59,14 +59,12 @@
        (alter-var-root var)))
 
 (defn shutdown-system!
-  "Shutdown system/nREPL stored in the given vars and exit if desired."
-  [{:keys [var nrepl stop]} exit?]
+  "Shutdown system/nREPL stored in the given vars."
+  [{:keys [var nrepl stop]}]
   (->> (fn [system]
          (when (and system stop)
            (stop system))
          nil)
        (alter-var-root var))
   (when (and nrepl @nrepl)
-    (nrepl/stop-nrepl! nrepl))
-  (when exit?
-    (System/exit 0)))
+    (nrepl/stop-nrepl! nrepl)))

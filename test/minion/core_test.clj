@@ -19,7 +19,6 @@
   (let [flow (atom [])
         f @(defmain m-main
              :system-as ^:not-once system
-             :exit? false
              :usage "usage-info"
              :command-line [["-o" "--option V" "an option."
                              :default "default"]]
@@ -63,7 +62,6 @@
              :system-as   ^:not-once help-system
              :restart-as  help-restart
              :shutdown-as help-shutdown
-             :exit? false
              :usage "usage-info"
              :command-line [["-o" "--option V"]])]
     (testing "help"
@@ -84,7 +82,6 @@
              :system-as   ^:not-once restart-system
              :restart-as  restart'
              :shutdown-as restart-shutdown
-             :exit? false
              :usage "usage-info"
              :command-line [["-o" "--option V" "an option."
                              :default "default"]]
@@ -126,34 +123,32 @@
       (is (= :ok (restart-shutdown))))))
 
 (deftest t-errors
-  (binding [minion.core/*exit-on-error?* false]
-    (let [f @(defmain m-error
-               :system-as   ^:not-once error-system
-               :nrepl-as    ^:not-once error-nrepl
-               :restart-as  error-restart
-               :shutdown-as error-shutdown
-               :exit? false
-               :start (fn [_ [v]]
-                        (if (= v "throw")
-                          (throw (Exception. "start"))
-                          :on))
-               :stop (fn [_]
-                       (throw (Exception. "stop"))))
-          reset #(reset-all 'error-system nil)]
-      (testing "unknown command line option."
-        (reset)
-        (with-open [w (java.io.StringWriter.)]
-          (binding [*out* w]
-            (is (= :error (f "--unknown-option")))
-            (is (re-find #"Unknown option" (str w)))
-            (is (re-find #"--unknown-option" (str w))))))
-      (testing "startup exceptions."
-        (reset)
-        (is (= :error (f "throw"))))
-      (testing "shutdown exceptions."
-        (reset)
-        (is (= :ok (f)))
-        (is (= :error (error-shutdown)))))))
+  (let [f @(defmain m-error
+             :system-as   ^:not-once error-system
+             :nrepl-as    ^:not-once error-nrepl
+             :restart-as  error-restart
+             :shutdown-as error-shutdown
+             :start (fn [_ [v]]
+                      (if (= v "throw")
+                        (throw (Exception. "start"))
+                        :on))
+             :stop (fn [_]
+                     (throw (Exception. "stop"))))
+        reset #(reset-all 'error-system nil)]
+    (testing "unknown command line option."
+      (reset)
+      (with-open [w (java.io.StringWriter.)]
+        (binding [*out* w]
+          (is (= :error (f "--unknown-option")))
+          (is (re-find #"Unknown option" (str w)))
+          (is (re-find #"--unknown-option" (str w))))))
+    (testing "startup exceptions."
+      (reset)
+      (is (= :error (f "throw"))))
+    (testing "shutdown exceptions."
+      (reset)
+      (is (= :ok (f)))
+      (is (= :error (error-shutdown))))))
 
 (deftest t-nrepl
   (let [port 12343
@@ -177,7 +172,6 @@
              :restart-as  nrepl-restart
              :shutdown-as nrepl-shutdown
              :nrepl {:greeting-fn (fn [& _] (swap! greeted? inc))}
-             :exit? false
              :default-port port)]
     (testing "default nREPL"
       (is (= :ok (f)))

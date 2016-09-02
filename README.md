@@ -87,7 +87,7 @@ You can set the var that stores the server handle using the option `:nrepl-as`
 the `:nrepl` option, e.g. to include
 [cider-nrepl](https://github.com/clojure-emacs/cider-nrepl):
 
-```
+```clojure
 (defmain -main
   ...
   :nrepl {:handler cider.nrepl/cider-nrepl-handler}
@@ -120,16 +120,12 @@ following functions to manage your system's lifecycle:
 - `(restart!)` will call the function declared as `:stop` on your system before
   instantiating a new one via `:start`; initial options and arguments are
 preserved,
-- `(shutdown!)` will stop your system _as well as the nREPL server_, before
-  calling `System/exit`,
-- `(shutdown! exit?)` will stop your system and nREPL server but `System/exit`
-  is only called if `exit?` is true.
+- `(shutdown!)` will stop your system _as well as the nREPL server_.
 
-Actually, there's the `:exit?` option that determines the behaviour of the
-zero-parameter `shutdown!` function.  Note that you can set symbols for shutdown
-and restart using `:shutdown-as` and `:restart-as`.
+Note that you can set symbols for shutdown and restart using `:shutdown-as` and
+`:restart-as`.
 
-Note that the function created by `defmain` can be called with a map as its
+Additionally, the function created by `defmain` can be called with a map as its
 first parameter, in which case it will be directly passed to the restart
 function.
 

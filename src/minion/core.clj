@@ -80,13 +80,11 @@
 
 (defn- create-shutdown
   "Create shutdown function."
-  [{:keys [shutdown-as system-as exit?]}]
-  `(let [exit# ~exit?]
-     (defn ~shutdown-as
-       ([] (~shutdown-as exit#))
-       ([exit-system#]
-        (let [sys# (-> (var ~system-as) meta ::system)]
-          (shutdown! sys# exit-system#))))))
+  [{:keys [shutdown-as system-as]}]
+  `(defn ~shutdown-as
+     []
+     (let [sys# (-> (var ~system-as) meta ::system)]
+       (shutdown! sys#))))
 
 (defn- create-shutdown-hook
   [{:keys [shutdown-as hook?]}]
@@ -103,9 +101,6 @@
                  (debug "shutdown hook has run.")
                  (catch Throwable t#
                    (warn t# "in shutdown hook."))))))))))
-
-(def ^:dynamic *exit-on-error?*
-  true)
 
 (defn- create-main
   "Create main function."
@@ -134,8 +129,7 @@
                ~(create-shutdown-hook opts))
              v#)
            (let [v# (~restart-as args#)]
-             (if (and (= v# :error) *exit-on-error?*)
-               (System/exit 1)
+             (when (not= v# :error)
                ~(create-shutdown-hook opts))
              v#))))))
 
@@ -164,8 +158,7 @@
   "Process options, add defaults."
   [opts]
   (-> (merge
-        {:exit?          true
-         :hook?          false
+        {:hook?          false
          :nrepl?         true
          :system-as      'system
          :nrepl-as       'nrepl
@@ -196,7 +189,6 @@
    - `:system-as`: the symbol used to create the system var (default: `system`).
    - `:restart-as`: the symbol used to create a restart function (default: `restart!`).
    - `:shutdown-as`: the symbol used to create a shutdown function (default: `shutdown!`).
-   - `:exit?`: whether or not to exit on shutdown.
    - `:hook?`: whether or not to register a shutdown hook that calls `:stop (default: false).
 
    Note that you will run into trouble if you explicitly run `System/exit` within the stop fn.
@@ -204,9 +196,8 @@
   [sym & {:keys [start stop command-line shortcuts usage
                  default-port nrepl
                  nrepl-as system-as restart-as shutdown-as
-                 exit? hook? nrepl?]
-          :or {exit?       true
-               nrepl?      true
+                 hook? nrepl?]
+          :or {nrepl?      true
                hook?       false
                system-as   'system
                nrepl-as    'nrepl
